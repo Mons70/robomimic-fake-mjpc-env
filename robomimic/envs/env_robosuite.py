@@ -8,25 +8,25 @@ import numpy as np
 from copy import deepcopy
 
 import robosuite
-import robosuite.utils.transform_utils as T
-try:
+#import robosuite.utils.transform_utils as T
+#try:
     # this is needed for ensuring robosuite can find the additional mimicgen environments (see https://mimicgen.github.io)
-    import mimicgen
-except ImportError:
-    pass
-try:
+#    import mimicgen
+#except ImportError:
+#    pass
+#try:
     # deprecated version of mimicgen
-    import mimicgen_envs
-except ImportError:
-    pass
+#    import mimicgen_envs
+#except ImportError:
+#    pass
 
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.envs.env_base as EB
 
 # protect against missing mujoco-py module, since robosuite might be using mujoco-py or DM backend
 try:
-    import mujoco_py
-    MUJOCO_EXCEPTIONS = [mujoco_py.builder.MujocoException]
+    import mujoco
+    MUJOCO_EXCEPTIONS = [mujoco.FatalError]
 except ImportError:
     MUJOCO_EXCEPTIONS = []
 
@@ -69,9 +69,11 @@ class EnvRobosuite(EB.EnvBase):
         self.use_depth_obs = use_depth_obs
 
         # robosuite version check
-        self._is_v1 = (robosuite.__version__.split(".")[0] == "1")
-        if self._is_v1:
-            assert (int(robosuite.__version__.split(".")[1]) >= 2), "only support robosuite v0.3 and v1.2+"
+        #self._is_v1 = (robosuite.__version__.split(".")[0] == "1")
+        #if self._is_v1:
+        #    assert (int(robosuite.__version__.split(".")[1]) >= 2), "only support robosuite v0.3 and v1.2+"
+
+        self._is_v1 = True
 
         kwargs = deepcopy(kwargs)
 
@@ -102,13 +104,14 @@ class EnvRobosuite(EB.EnvBase):
 
         self._env_name = env_name
         self._init_kwargs = deepcopy(kwargs)
-        self.env = robosuite.make(self._env_name, **kwargs)
+        #self.env = robosuite.make(self._env_name, **kwargs)
+        self.env = None
 
-        if self._is_v1:
-            # Make sure joint position observations and eef vel observations are active
-            for ob_name in self.env.observation_names:
-                if ("joint_pos" in ob_name) or ("eef_vel" in ob_name):
-                    self.env.modify_observable(observable_name=ob_name, attribute="active", modifier=True)
+        #if self._is_v1:
+        #    # Make sure joint position observations and eef vel observations are active
+        #    for ob_name in self.env.observation_names:
+        #        if ("joint_pos" in ob_name) or ("eef_vel" in ob_name):
+        #            self.env.modify_observable(observable_name=ob_name, attribute="active", modifier=True)
 
     def step(self, action):
         """
@@ -153,14 +156,14 @@ class EnvRobosuite(EB.EnvBase):
         should_ret = False
         if "model" in state:
             self.reset()
-            robosuite_version_id = int(robosuite.__version__.split(".")[1])
-            if robosuite_version_id <= 3:
-                from robosuite.utils.mjcf_utils import postprocess_model_xml
-                xml = postprocess_model_xml(state["model"])
-            else:
-                # v1.4 and above use the class-based edit_model_xml function
-                xml = self.env.edit_model_xml(state["model"])
-            self.env.reset_from_xml_string(xml)
+            #robosuite_version_id = int(robosuite.__version__.split(".")[1])
+            #if robosuite_version_id <= 3:
+            #    from robosuite.utils.mjcf_utils import postprocess_model_xml
+            #    xml = postprocess_model_xml(state["model"])
+            #else:
+            #    # v1.4 and above use the class-based edit_model_xml function
+            #    xml = self.env.edit_model_xml(state["model"])
+            #self.env.reset_from_xml_string(xml)
             self.env.sim.reset()
             if not self._is_v1:
                 # hide teleop visualization after restoring from model
@@ -443,7 +446,8 @@ class EnvRobosuite(EB.EnvBase):
                 @camera_names is non-empty, False otherwise.
             use_depth_obs (bool): if True, use depth observations
         """
-        is_v1 = (robosuite.__version__.split(".")[0] == "1")
+        #is_v1 = (robosuite.__version__.split(".")[0] == "1")
+        is_v1 = True
         has_camera = (len(camera_names) > 0)
 
         new_kwargs = {
